@@ -102,8 +102,24 @@
  		   <groupId>org.springframework.cloud</groupId>
  		   <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
 		</dependency>
+		
+		<dependency>
+    		<groupId>org.projectlombok</groupId>
+    		<artifactId>lombok</artifactId>
+    		<scope>provided</scope>
+		</dependency>
+    	
+    	<dependency>
+		    <groupId>com.example.shared</groupId>
+		    <artifactId>elm-shared-dtos</artifactId>
+		    <version>1.0.0</version>
+		</dependency>
 
-
+		<dependency>
+		    <groupId>com.nimbusds</groupId>
+		    <artifactId>nimbus-jose-jwt</artifactId>
+		    <version>9.31</version> <!-- Ensure you use a compatible version -->
+		</dependency>
     </dependencies>
 
     <!-- Spring Cloud Dependency Management -->
