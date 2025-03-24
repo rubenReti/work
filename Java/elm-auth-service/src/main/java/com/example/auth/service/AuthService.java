@@ -23,11 +23,26 @@ public class AuthService {
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public String register(Employee employee) {
-        // Hash the password before saving
+        System.out.println("📥 Registering employee:");
+        System.out.println("📧 Email: " + employee.getEmail());
+        System.out.println("👤 Username: " + employee.getUsername());
+        System.out.println("🔐 Raw Password: " + employee.getPassword());
+        System.out.println("🧩 Role: " + employee.getRole());
+
         employee.setPassword(passwordEncoder.encode(employee.getPassword()));
-        employeeRepository.save(employee);
+
+        try {
+            employeeRepository.save(employee);
+            System.out.println("✅ Employee saved.");
+        } catch (Exception e) {
+            System.err.println("❌ DB Save Error: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+
         return "User registered successfully!";
     }
+
 
     
     
