@@ -1,6 +1,8 @@
 package com.example.auth.controller;
 
 import com.example.auth.model.Employee;
+import com.example.shared.dto.AuthUserDTO;
+
 import com.example.auth.security.JwtUtil;
 import com.example.auth.service.AuthService;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -58,20 +60,29 @@ public class AuthController {
     }
 
     
-    @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
+//    @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
+//    @PostMapping("/register")
+//    public ResponseEntity<String> register(@RequestBody Employee employee, Authentication authentication) {
+//        System.out.println("🔍 Register API hit!");
+//        System.out.println("🔐 Authenticated as: " + authentication.getName());
+//        System.out.println("🔐 Roles: " + authentication.getAuthorities());
+//
+//        System.out.println("🔍 Register API hit!");
+//        System.out.println("📧 Email: " + employee.getEmail());
+//        System.out.println("👤 Username: " + employee.getUsername());
+//        System.out.println("🔐 Password: " + employee.getPassword());
+//        System.out.println("🧩 Role: " + employee.getRole());
+//        return ResponseEntity.ok(authService.register(employee));
+//    }
+    
+    
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody Employee employee, Authentication authentication) {
-        System.out.println("🔍 Register API hit!");
-        System.out.println("🔐 Authenticated as: " + authentication.getName());
-        System.out.println("🔐 Roles: " + authentication.getAuthorities());
-
-        System.out.println("🔍 Register API hit!");
-        System.out.println("📧 Email: " + employee.getEmail());
-        System.out.println("👤 Username: " + employee.getUsername());
-        System.out.println("🔐 Password: " + employee.getPassword());
-        System.out.println("🧩 Role: " + employee.getRole());
-        return ResponseEntity.ok(authService.register(employee));
+    @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
+    public ResponseEntity<String> register(@RequestBody AuthUserDTO authUserDTO, Authentication authentication) {
+        System.out.println("🔍 Register API hit with DTO!");
+        return ResponseEntity.ok(authService.register(authUserDTO));
     }
+
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestParam("email") String email, @RequestParam("password") String password) {
