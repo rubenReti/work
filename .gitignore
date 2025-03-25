@@ -1,0 +1,24 @@
+/.metadata/
+
+
+# Ignore everything except our microservices
+!elm-api-gateway/
+!elm-employee-service/
+!elm-eureka-server/
+
+# Ignore other folders
+demo/
+demo1/
+easy1_mergeSortedArray/
+easy2_RemovElement/
+easy3_RemovDuplicateFromArr/
+hard_caclul/
+medium1_RotateArray/
+medium2_TwoSum2/
+mediumPRN/
+medium_RPN/
+medium_SetMatrixZeroes/
+medium_Spiral_matrix/
+medium_rotate/
+medium_smallestSubStr/
+stk/
