@@ -18,3 +18,19 @@ public class ElmApiGatewayApplication {
         SpringApplication.run(ElmApiGatewayApplication.class, args);
     }
 }
+
+
+
+
+/* curls commands
+
+  get token:
+curl -X POST "http://localhost:8080/auth/login?email=HR@example.com&password=HR121"       
+
+getall employe:
+ curl -H "Authorization: Bearer eyJhb....YY1MMb9AzLNoI8yq-J8IQjQGFExl4g" http://localhost:8080/employees
+
+insert new employe:
+curl -X POST http://localhost:8080/employees -H "Authorization: Bearer eyJhb....oI8yq-J8IQjQGFExl4g" -H "Content-Type: application/json" -d "{\"firstName\":\"Eva\",\"lastName\":\"Green\",\"email\":\"eva.green@example.com\",\"department\":\"Finance\"}"
+{"id":15,"firstName":"Eva","lastName":"Green","email":"eva.green@example.com","department":"Finance"}
+*/

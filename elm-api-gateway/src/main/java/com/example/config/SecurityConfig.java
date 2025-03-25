@@ -49,26 +49,44 @@ public class SecurityConfig {
 //        return NimbusReactiveJwtDecoder.withJwkSetUri("http://localhost:8082/.well-known/jwks.json").build();
 //    }
 
-    
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(exchange -> exchange
-                .pathMatchers("/actuator/**").permitAll()  // ✅ Open Actuator
-                .pathMatchers("/auth/login").permitAll()  // ✅ Allow login without authentication
-                .pathMatchers("/auth/.well-known/jwks.json").permitAll() // ✅ Add this
-                .pathMatchers("/auth/register").hasAnyRole("HR", "ADMIN")  // 🔐 Only HR/Admin can register
-                .pathMatchers("/employees/**").hasAnyRole("ADMIN", "HR")  // 🔐 Employees require proper role
+                .pathMatchers("/actuator/**").permitAll()
+                .pathMatchers("/auth/login").permitAll()
+                .pathMatchers("/fallback/**").permitAll()
+                .pathMatchers("/auth/.well-known/jwks.json").permitAll()
+                .pathMatchers("/auth/register").hasAnyRole("HR", "ADMIN")
+                .pathMatchers("/employees/**").hasAnyRole("ADMIN", "HR")
                 .anyExchange().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> 
-            oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor()))
-        )            .httpBasic()
-            .and()
-            .formLogin();
+            .oauth2ResourceServer(oauth2 ->
+                oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor()))
+            );
 
         return http.build();
     }
+
+//    @Bean
+//    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+//        http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+//            .authorizeExchange(exchange -> exchange
+//                .pathMatchers("/actuator/**").permitAll()  // ✅ Open Actuator
+//                .pathMatchers("/auth/login").permitAll()  // ✅ Allow login without authentication
+//                .pathMatchers("/auth/.well-known/jwks.json").permitAll() // ✅ Add this
+//                .pathMatchers("/auth/register").hasAnyRole("HR", "ADMIN")  // 🔐 Only HR/Admin can register
+//                .pathMatchers("/employees/**").hasAnyRole("ADMIN", "HR")  // 🔐 Employees require proper role
+//                .anyExchange().authenticated()
+//            )
+//            .oauth2ResourceServer(oauth2 -> 
+//            oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor()))
+//        )            .httpBasic()
+//            .and()
+//            .formLogin();
+//
+//        return http.build();
+//    }
     
     private Converter<Jwt, Mono<? extends AbstractAuthenticationToken>> grantedAuthoritiesExtractor() {
         JwtGrantedAuthoritiesConverter delegate = new JwtGrantedAuthoritiesConverter();
