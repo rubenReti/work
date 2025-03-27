@@ -1,3 +1,6 @@
+com\example\shared\event\EventType.class
 com\example\shared\dto\EmployeeDTO.class
-com\example\shared\dto\AuthUserDTO.class
+com\example\shared\event\EmployeeEvent.class
 com\example\shared\dto\RoleDTO.class
+com\example\shared\dto\AuthUserDTO.class
+com\example\shared\event\EmployeeEvent$EmployeeEventBuilder.class
