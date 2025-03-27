@@ -1,7 +1,12 @@
 package com.example.service;
 
 import com.example.entity.Employee;
+import com.example.kafka.EmployeeEventProducer;
 import com.example.repository.EmployeeRepository;
+import com.example.shared.dto.EmployeeDTO;
+import com.example.shared.event.EmployeeEvent;
+import com.example.shared.event.EventType;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +18,9 @@ public class EmployeeService {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+    
+    @Autowired
+    private EmployeeEventProducer eventProducer;
 
     // Fetch all employees
     public List<Employee> getAllEmployees() {
@@ -29,19 +37,57 @@ public class EmployeeService {
         if (employee.getDepartment() == null || employee.getDepartment().isEmpty()) {
             employee.setDepartment("General"); // Assign default value if missing
         }
-        return employeeRepository.save(employee);
+        Employee saved = employeeRepository.save(employee);
+
+        EmployeeDTO dto = new EmployeeDTO(
+            saved.getId(),
+            saved.getFirstName(),
+            saved.getLastName(),
+            saved.getEmail(),
+            saved.getDepartment()
+        );
+
+        EmployeeEvent event = EmployeeEvent.builder()
+            .eventType(EventType.EMPLOYEE_CREATED)
+            .employee(dto)
+            .timestamp(java.time.Instant.now())
+            .build();
+
+        eventProducer.sendEvent(event);
+        return saved;
     }
 
     // Update an existing employee (Ensure department is set)
     public Employee updateEmployee(Long id, Employee updatedEmployee) {
-        return employeeRepository.findById(id).map(employee -> {
-            employee.setFirstName(updatedEmployee.getFirstName());
-            employee.setLastName(updatedEmployee.getLastName());
-            employee.setEmail(updatedEmployee.getEmail());
-            employee.setDepartment(updatedEmployee.getDepartment() != null ? updatedEmployee.getDepartment() : "General");
-            return employeeRepository.save(employee);
+        return employeeRepository.findById(id).map(existing -> {
+            existing.setFirstName(updatedEmployee.getFirstName());
+            existing.setLastName(updatedEmployee.getLastName());
+            existing.setEmail(updatedEmployee.getEmail());
+            existing.setDepartment(updatedEmployee.getDepartment() != null ? updatedEmployee.getDepartment() : "General");
+
+            Employee saved = employeeRepository.save(existing);
+
+            // Send EMPLOYEE_UPDATED event
+            EmployeeDTO dto = new EmployeeDTO(
+                saved.getId(),
+                saved.getFirstName(),
+                saved.getLastName(),
+                saved.getEmail(),
+                saved.getDepartment()
+            );
+
+            EmployeeEvent event = EmployeeEvent.builder()
+                .eventType(EventType.EMPLOYEE_UPDATED)
+                .employee(dto)
+                .timestamp(java.time.Instant.now())
+                .build();
+
+            eventProducer.sendEvent(event); 
+
+            return saved;
         }).orElse(null);
     }
+
 
     // Delete an employee by ID
     public void deleteEmployee(Long id) {
