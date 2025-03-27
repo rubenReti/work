@@ -1,10 +1,11 @@
-package com.example.auth.service;
+  package com.example.auth.service;
 
 import com.example.auth.model.Employee;
 import com.example.auth.model.Role;
 import com.example.auth.repository.EmployeeRepository;
 import com.example.auth.security.JwtUtil;
 import com.example.shared.dto.AuthUserDTO;
+import com.example.shared.dto.EmployeeDTO;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -26,25 +27,23 @@ public class AuthService {
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     
-    
-    public String register(AuthUserDTO dto) {
-        System.out.println("📥 Registering employee with DTO: " + dto.getEmail());
+    public void registerFromEmployeeDTO(EmployeeDTO dto) {
+        String username = (dto.getFirstName() + "." + dto.getLastName()).toLowerCase();
+        String role = mapDepartmentToRole(dto.getDepartment());
 
         Employee employee = new Employee();
-        employee.setUsername(dto.getUsername());
+        employee.setUsername(username);
         employee.setEmail(dto.getEmail());
-        employee.setPassword(passwordEncoder.encode(dto.getPassword()));
-        employee.setRole(Role.valueOf(dto.getRole())); // Convert string to enum
+        employee.setPassword(passwordEncoder.encode("defaultPassword123"));
+        employee.setRole(Role.valueOf(role));
 
         try {
             employeeRepository.save(employee);
-            System.out.println("✅ Employee saved.");
+            System.out.println("✅ Auth user registered from EmployeeDTO: " + dto.getEmail());
         } catch (Exception e) {
-            System.err.println("❌ DB Save Error: " + e.getMessage());
+            System.err.println("❌ DB Save Error during registration: " + e.getMessage());
             throw e;
         }
-
-        return "User registered successfully!";
     }
 
 //    public String register(Employee employee) {
@@ -93,29 +92,45 @@ public class AuthService {
     }
 
     
-    
-//    public String login(String email, String password) {
-//        System.out.println("🔍 Attempting login for email: " + email); // Debug log
-//
-//        Optional<Employee> user = employeeRepository.findByEmail(email);
-//        if (user.isEmpty()) {
-//            System.out.println("❌ User not found: " + email);
-//            throw new RuntimeException("Invalid credentials");
-//        }
-//
-//        Employee employee = user.get();
-//
-//        if (!passwordEncoder.matches(password, employee.getPassword())) {
-//            System.out.println("❌ Incorrect password for email: " + email);
-//            throw new RuntimeException("Invalid credentials");
-//        }
-//
-//        // Generate JWT token with user role
-//        System.out.println("✅ Login successful for email: " + email);
-//        return jwtUtil.generateToken(email, Collections.singletonList(employee.getRole().name()));
-//    }
+
 
     public List<String> getRolesFromToken(String token) {
         return jwtUtil.extractClaims(token).get("roles", List.class);
     }
+    
+    
+    
+    
+    //called from kafka's listener 
+    public void updateAuthUserFromEmployeeDTO(EmployeeDTO dto) {
+        String email = dto.getEmail();
+        Optional<Employee> optional = employeeRepository.findByEmail(email);
+
+        if (optional.isEmpty()) {
+            System.out.println("❌ No auth user found for email: " + email);
+            return;
+        }
+
+        Employee existing = optional.get();
+
+        String username = (dto.getFirstName() + "." + dto.getLastName()).toLowerCase();
+        String role = mapDepartmentToRole(dto.getDepartment());
+
+        existing.setUsername(username);
+        existing.setEmail(email);
+        existing.setRole(Role.valueOf(role));
+
+        employeeRepository.save(existing);
+        System.out.println("✅ Auth user updated for email: " + email);
+    }
+
+    private String mapDepartmentToRole(String department) {
+        return switch (department.toLowerCase()) {
+            case "hr" -> "HR";
+            case "it" -> "ADMIN";
+            case "management" -> "MANAGER";
+            default -> "USER";
+        };
+    }
+
 }

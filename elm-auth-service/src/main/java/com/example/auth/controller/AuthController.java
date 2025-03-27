@@ -2,7 +2,7 @@ package com.example.auth.controller;
 
 import com.example.auth.model.Employee;
 import com.example.shared.dto.AuthUserDTO;
-
+import com.example.shared.dto.EmployeeDTO;
 import com.example.auth.security.JwtUtil;
 import com.example.auth.service.AuthService;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -78,10 +78,11 @@ public class AuthController {
     
     @PostMapping("/register")
     @PreAuthorize("hasAnyRole('HR', 'ADMIN')")
-    public ResponseEntity<String> register(@RequestBody AuthUserDTO authUserDTO, Authentication authentication) {
-        System.out.println("🔍 Register API hit with DTO!");
-        return ResponseEntity.ok(authService.register(authUserDTO));
+    public ResponseEntity<String> register(@RequestBody EmployeeDTO dto) {
+        authService.registerFromEmployeeDTO(dto);
+        return ResponseEntity.ok("User registered successfully via public API");
     }
+
 
 
     @PostMapping("/login")
