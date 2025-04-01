@@ -19,11 +19,14 @@ public class EmployeeEventListener {
 
     @KafkaListener(topics = "employee-events", groupId = "auth-service-group")
     public void handleEmployeeEvents(EmployeeEvent event) {
-        System.out.println("📥 Received Kafka Event: " + event);
+        System.out.println("Received Kafka Event: " + event);
 
         switch (event.getEventType()) {
             case EMPLOYEE_CREATED -> authService.registerFromEmployeeDTO(event.getEmployee());
             case EMPLOYEE_UPDATED -> authService.updateAuthUserFromEmployeeDTO(event.getEmployee());
+//            case EMPLOYEE_DELETED -> authService.disableUserByEmail(event.getEmployee().getEmail());
+            case EMPLOYEE_DELETED -> authService.deleteUserByEmail(event.getEmployee().getEmail());
+
             default -> System.out.println("⚠️ Unsupported event type: " + event.getEventType());
         }
     }

@@ -1,5 +1,6 @@
   package com.example.auth.service;
 
+import com.example.auth.kafka.AuthEventProducer;
 import com.example.auth.model.Employee;
 import com.example.auth.model.Role;
 import com.example.auth.repository.EmployeeRepository;
@@ -15,8 +16,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class AuthService {
+	
+	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+	
+	String defaultPswd = "defaultPassword123";
 
     @Autowired
     private EmployeeRepository employeeRepository;
@@ -26,6 +35,8 @@ public class AuthService {
 
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
+    @Autowired
+    private AuthEventProducer eventProducer; // Add this field
     
     public void registerFromEmployeeDTO(EmployeeDTO dto) {
         String username = (dto.getFirstName() + "." + dto.getLastName()).toLowerCase();
@@ -34,57 +45,51 @@ public class AuthService {
         Employee employee = new Employee();
         employee.setUsername(username);
         employee.setEmail(dto.getEmail());
-        employee.setPassword(passwordEncoder.encode("defaultPassword123"));
+        employee.setPassword(passwordEncoder.encode(defaultPswd));
         employee.setRole(Role.valueOf(role));
 
         try {
             employeeRepository.save(employee);
-            System.out.println("✅ Auth user registered from EmployeeDTO: " + dto.getEmail());
+
+            log.info("✅ Auth user registered from EmployeeDTO: {}", dto.getEmail());
+            
+            
+
+            // Notify Notification Service
+            AuthUserDTO userDTO = new AuthUserDTO(
+                null,
+                username,
+                dto.getEmail(),
+                defaultPswd, // only here for Notification
+                role
+            );
+            eventProducer.sendAuthUserCreated(userDTO);
+            
+
         } catch (Exception e) {
-            System.err.println("❌ DB Save Error during registration: " + e.getMessage());
+            log.error("❌ DB Save Error during registration", e);
             throw e;
         }
     }
 
-//    public String register(Employee employee) {
-//        System.out.println("📥 Registering employee:");
-//        System.out.println("📧 Email: " + employee.getEmail());
-//        System.out.println("👤 Username: " + employee.getUsername());
-//        System.out.println("🔐 Raw Password: " + employee.getPassword());
-//        System.out.println("🧩 Role: " + employee.getRole());
-//
-//        employee.setPassword(passwordEncoder.encode(employee.getPassword()));
-//
-//        try {
-//            employeeRepository.save(employee);
-//            System.out.println("✅ Employee saved.");
-//        } catch (Exception e) {
-//            System.err.println("❌ DB Save Error: " + e.getMessage());
-//            e.printStackTrace();
-//            throw e;
-//        }
-//
-//        return "User registered successfully!";
-//    }
 
-
-    
     
     public String login(String email, String password) {
-        System.out.println("🔍 Attempting login for: " + email);
+    	log.info("✅ Auth user LOGIN -  mail: {}", email);
+
 
         Optional<Employee> user = employeeRepository.findByEmail(email);
         if (user.isEmpty()) {
-            System.out.println("❌ User not found: " + email);
+        	log.error("❌ User not found: " + email);
             throw new RuntimeException("Invalid credentials");
         }
 
         Employee employee = user.get();
-        System.out.println("🔍 Stored password (hashed): " + employee.getPassword());
-        System.out.println("🔍 Entered password: " + password);
+        log.info("🔍 Stored password (hashed): " + employee.getPassword());
+        log.info("🔍 Entered password: " + password);
 
         if (!passwordEncoder.matches(password, employee.getPassword())) {
-            System.out.println("❌ Password mismatch for: " + email);
+        	log.error("❌ Password mismatch for: " + email);
             throw new RuntimeException("Invalid credentials");
         }
 
@@ -107,7 +112,7 @@ public class AuthService {
         Optional<Employee> optional = employeeRepository.findByEmail(email);
 
         if (optional.isEmpty()) {
-            System.out.println("❌ No auth user found for email: " + email);
+        	log.error("❌ No auth user found for email: " + email);
             return;
         }
 
@@ -121,8 +126,25 @@ public class AuthService {
         existing.setRole(Role.valueOf(role));
 
         employeeRepository.save(existing);
-        System.out.println("✅ Auth user updated for email: " + email);
+        log.info("✅ Auth user updated for email: " + email);
     }
+    
+    
+    
+    
+    
+    
+    public void deleteUserByEmail(String email) {
+        Optional<Employee> optional = employeeRepository.findByEmail(email);
+        optional.ifPresent(employee -> {
+            employeeRepository.delete(employee);
+            log.info("🗑 Auth user deleted: " + email);
+        });
+    }
+
+
+    
+    //privte stuffs
 
     private String mapDepartmentToRole(String department) {
         return switch (department.toLowerCase()) {
