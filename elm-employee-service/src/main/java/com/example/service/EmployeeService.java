@@ -89,8 +89,28 @@ public class EmployeeService {
     }
 
 
-    // Delete an employee by ID
     public void deleteEmployee(Long id) {
-        employeeRepository.deleteById(id);
+        employeeRepository.findById(id).ifPresent(employee -> {
+            // Create DTO for event
+            EmployeeDTO dto = new EmployeeDTO(
+                employee.getId(),
+                employee.getFirstName(),
+                employee.getLastName(),
+                employee.getEmail(),
+                employee.getDepartment()
+            );
+
+            EmployeeEvent event = EmployeeEvent.builder()
+                .eventType(EventType.EMPLOYEE_DELETED)
+                .employee(dto)
+                .timestamp(java.time.Instant.now())
+                .build();
+
+            eventProducer.sendEvent(event); // 🔁 Reuse same producer
+
+            employeeRepository.deleteById(id);
+            System.out.println("✅ Employee deleted and event sent: " + id);
+        });
     }
+
 }
