@@ -1,6 +1,8 @@
 package com.example.notification.config;
 
 import com.example.shared.event.EmployeeEvent;
+import com.example.shared.event.LeaveBalanceEvent;
+import com.example.shared.dto.LeaveRequestDTO;
 import com.example.shared.event.AuthEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -65,4 +67,55 @@ public class KafkaConsumerConfig {
         factory.setConsumerFactory(authConsumerFactory());
         return factory;
     }
+    
+    
+//leave balance event    
+    @Bean
+    public ConsumerFactory<String, LeaveBalanceEvent> leaveBalanceEventConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
+                new JsonDeserializer<>(LeaveBalanceEvent.class));
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, LeaveBalanceEvent> leaveBalanceKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, LeaveBalanceEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(leaveBalanceEventConsumerFactory());
+        return factory;
+    }
+  
+    
+  //leave request event 
+    @Bean
+    public ConsumerFactory<String, LeaveRequestDTO> leaveRequestConsumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,  "localhost:9092");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "leave-group");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.shared.dto");
+
+        return new DefaultKafkaConsumerFactory<>(
+            props,
+            new StringDeserializer(),
+            new JsonDeserializer<>(LeaveRequestDTO.class, false)
+        );
+    }
+
+    @Bean(name = "leaveKafkaListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, LeaveRequestDTO> leaveKafkaListenerContainerFactory(
+            ConsumerFactory<String, LeaveRequestDTO> leaveRequestConsumerFactory) {
+        ConcurrentKafkaListenerContainerFactory<String, LeaveRequestDTO> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(leaveRequestConsumerFactory);
+        return factory;
+    }
+
+
+
 }

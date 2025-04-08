@@ -1,6 +1,8 @@
 package com.example.notification.service;
 
 import com.example.shared.dto.EmployeeDTO;
+import com.example.shared.dto.LeaveRequestDTO;
+
 import com.example.shared.dto.AuthUserDTO;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -52,6 +54,55 @@ public class NotificationService {
       
     }
     
+    public void sendLeaveApprovedEmail(LeaveRequestDTO leave) {
+        log.info("📧 [LEAVE APPROVED]");
+        log.info("To: " + leave.getEmployeeEmail());
+
+        String subject = "✅ Your Leave Has Been Approved";
+        String content = String.format(
+            "Hi,\n\nYour leave from %s to %s has been approved.\nReason: %s\n\nEnjoy your time off!",
+            leave.getStartDate(), leave.getEndDate(), leave.getReason()
+        );
+
+        sendEmail(leave.getEmployeeEmail(), subject, content);
+    }
+
+    public void sendLeaveRejectedEmail(LeaveRequestDTO leave) {
+        log.info("📧 [LEAVE REJECTED]");
+        log.info("To: " + leave.getEmployeeEmail());
+
+        String subject = "❌ Your Leave Request Was Rejected";
+        String content = String.format(
+            "Hi,\n\nYour leave request from %s to %s was rejected.\nReason: %s\n\nPlease contact your manager for details.",
+            leave.getStartDate(), leave.getEndDate(), leave.getReason()
+        );
+
+        sendEmail(leave.getEmployeeEmail(), subject, content);
+    }
+
+    public void sendLeaveRequestedEmail(LeaveRequestDTO leave) {
+        log.info("📧 [LEAVE REQUESTED]");
+        log.info("New request from: " + leave.getEmployeeEmail());
+
+        String subject = "🆕 New Leave Request Submitted";
+        String content = String.format(
+            "A new leave request was submitted by %s.\nStart: %s\nEnd: %s\nReason: %s",
+            leave.getEmployeeEmail(), leave.getStartDate(), leave.getEndDate(), leave.getReason()
+        );
+
+        // You could route this to a real manager address later.
+        sendEmail("manager@elm-notify.local", subject, content);
+    }
+
+    public void sendLeaveBalanceUpdatedEmail(String email) {
+        log.info("📧 [LEAVE BALANCE UPDATED]");
+        log.info("To: " + email);
+
+        String subject = "🧮 Your Leave Entitlement Has Been Updated";
+        String content = "Hi,\n\nYour leave allowance has been updated by HR or your manager.\nCheck the portal for the new balance.";
+
+        sendEmail(email, subject, content);
+    }
     
     private void sendEmail(String to, String subject, String body) {
         try {

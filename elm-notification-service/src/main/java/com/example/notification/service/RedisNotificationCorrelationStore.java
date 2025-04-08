@@ -27,43 +27,71 @@ public class RedisNotificationCorrelationStore {
     private int redisTtlMinutes; // expire incomplete pairs after X mins - def in app.propp
 
     private record EventState(
-        boolean employeeCreated,
-        boolean authCreated,
-        EmployeeDTO employee,
-        AuthUserDTO authUser
-    ) {}
+    	    boolean employeeCreated,
+    	    boolean authCreated,
+    	    boolean leaveBalanceInitialized,
+    	    EmployeeDTO employee,
+    	    AuthUserDTO authUser
+    	) {}
 
     public synchronized void handleEmployeeCreated(EmployeeDTO dto) {
+        log.info("RRR handleEmployeeCreated: " + dto);
+
         String email = dto.getEmail();
         EventState state = getState(email);
-        state = new EventState(true, state.authCreated, dto, state.authUser);
+        state = new EventState(true, state.authCreated, state.leaveBalanceInitialized, dto, state.authUser);
 
         setState(email, state);
 
-        if (state.authCreated) trigger(email, state);
+        if (state.authCreated) trySendIfComplete(email, state);
+
     }
 
     public synchronized void handleAuthCreated(AuthUserDTO dto) {
+        log.info("RRR handleAuthCreated: " + dto);
+
         String email = dto.getEmail();
         EventState state = getState(email);
-        state = new EventState(state.employeeCreated, true, state.employee, dto);
+        state = new EventState(state.employeeCreated, true, state.leaveBalanceInitialized, state.employee, dto);
 
         setState(email, state);
 
-        if (state.employeeCreated) trigger(email, state);
+        if (state.employeeCreated)// trigger(email, state);
+        	trySendIfComplete(email, state);
+
+    }
+    
+    public synchronized void handleLeaveBalanceInitialized(String email) {
+        log.info("RRR handleLeaveBalanceInitialized: " + email);
+
+        EventState state = getState(email);
+        state = new EventState(
+            state.employeeCreated,
+            state.authCreated,
+            true,
+            state.employee,
+            state.authUser
+        );
+        setState(email, state);
+        trySendIfComplete(email, state);
     }
 
-    private void trigger(String email, EventState state) {
-    	log.info("🚨 [Redis] Triggering notification for: " + email);
-        notificationService.sendWelcomeEmail(state.employee);
-        notificationService.sendCredentialsEmail(state.authUser);
-        redisTemplate.delete(key(email));
+    
+    private void trySendIfComplete(String email, EventState state) {
+        if (state.employeeCreated && state.authCreated && state.leaveBalanceInitialized) {
+            log.info("📬 [Redis] All onboarding events received for: " + email);
+            notificationService.sendWelcomeEmail(state.employee);
+            notificationService.sendCredentialsEmail(state.authUser);
+            redisTemplate.delete(key(email));
+        }
     }
+
+
 
     private EventState getState(String email) {
         try {
             String json = redisTemplate.opsForValue().get(key(email));
-            if (json == null) return new EventState(false, false, null, null);
+            if (json == null) return new EventState(false, false, false, null, null);
             return objectMapper.readValue(json, EventState.class);
         } catch (Exception e) {
             throw new RuntimeException("❌ Failed to load EventState from Redis", e);
