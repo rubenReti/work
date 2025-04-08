@@ -1,4 +1,0 @@
-2025-04-01T00:00:25.840+03:00 DEBUG 39044 --- [elm-employee-service] [DiscoveryClient-HeartbeatExecutor-%d] o.s.web.client.RestTemplate              : HTTP PUT http://localhost:8761/eureka/apps/ELM-EMPLOYEE-SERVICE/192.168.1.3:elm-employee-service:0?status=UP&lastDirtyTimestamp=1743420046359
-2025-04-01T00:00:26.185+03:00 DEBUG 39044 --- [elm-employee-service] [DiscoveryClient-CacheRefreshExecutor-%d] o.s.web.client.RestTemplate              : HTTP GET http://localhost:8761/eureka/apps/delta
-2025-04-01T00:00:26.263+03:00 DEBUG 39044 --- [elm-employee-service] [DiscoveryClient-HeartbeatExecutor-%d] o.s.web.client.RestTemplate              : Accept=[application/json, application/*+json]
-2025-04-01T00:00:26.263+03:00 DEBUG 39044 --- [elm-employee-service] [DiscoveryClient-CacheRefreshExecutor-%d] o.s.web.client.RestTemplate              : Accept=[application/json, application/*+json]
