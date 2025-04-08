@@ -1,6 +1,10 @@
 C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\dto\RoleDTO.java
+C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\event\LeaveEvent.java
 C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\dto\AuthUserDTO.java
+C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\dto\LeaveBalanceDTO.java
+C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\dto\LeaveRequestDTO.java
 C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\event\AuthEvent.java
 C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\event\EmployeeEvent.java
 C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\dto\EmployeeDTO.java
 C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\event\EventType.java
+C:\Work\Java\elm-shared-dtos\src\main\java\com\example\shared\event\LeaveBalanceEvent.java
