@@ -4,12 +4,17 @@ import com.example.entity.LeaveBalance;
 import com.example.entity.LeaveRequest;
 import com.example.entity.LeaveRequest.LeaveStatus;
 import com.example.kafka.LeaveEventProducer;
+//import com.example.notification.kafka.AuthEventListener;
 import com.example.repository.LeaveBalanceRepository;
 import com.example.repository.LeaveRequestRepository;
 import com.example.shared.dto.LeaveBalanceDTO;
 import com.example.shared.dto.LeaveRequestDTO;
 import com.example.shared.event.EventType;
 import lombok.RequiredArgsConstructor;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.temporal.ChronoUnit;
 
@@ -21,9 +26,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor //generates the constructor ->Spring auto-wires via constructor instead of @Autowired on fields
 public class LeaveRequestService {
+	
+	private static final Logger log = LoggerFactory.getLogger(LeaveRequestService.class);
+
 
 	
-//	@Autowired 
+	@Autowired 
 	private RedisLockService lockService;
 
     private final LeaveRequestRepository leaveRequestRepository;
@@ -40,6 +48,8 @@ public class LeaveRequestService {
     }
 
     public LeaveRequestDTO requestLeave(LeaveRequestDTO dto) {
+    	log.info("RRRR in requestLeave : DTO: {}", dto);
+
         LeaveRequest entity = LeaveRequest.builder()
                 .employeeEmail(dto.getEmployeeEmail())
                 .startDate(dto.getStartDate())
@@ -60,6 +70,8 @@ public class LeaveRequestService {
     //loc across instances by redis 
     public LeaveRequestDTO approve(Long id, String managerEmail) {
     	
+    		log.info("RRRR approve service ");
+
     	
     	   LeaveRequest request = leaveRequestRepository.findById(id).orElseThrow();
     	    String email = request.getEmployeeEmail();
@@ -67,21 +79,29 @@ public class LeaveRequestService {
 
     	    String lockId = lockService.tryLock(lockKey);
     	    if (lockId == null) {
+    	    	log.info("RRRR This leave request is already being processed");  	
     	        throw new IllegalStateException("This leave request is already being processed");
     	    }
     	    
 
     	    try {  	    
         long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
+		log.info("RRRR days  {}" , days);
+        
 
         boolean allowed = leaveBalanceService.deductDays(request.getEmployeeEmail(), days);
-        if (!allowed) throw new RuntimeException("Not enough leave balance");
+        if (!allowed) {
+    				log.info("RRRR Not enough leave balance");
+        			throw new RuntimeException("Not enough leave balance");
+        }
 
         request.setStatus(LeaveStatus.APPROVED);
         request.setActionedBy(managerEmail); // 🧠
         LeaveRequest updated = leaveRequestRepository.save(request);
 
         LeaveRequestDTO dto = toDTO(updated);
+    	log.info("RRRR aproved : DTO: {}", dto);
+
         eventProducer.sendLeaveEvent(EventType.LEAVE_APPROVED, dto);
         return dto;
     	    } finally {

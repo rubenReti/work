@@ -25,9 +25,21 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/leaves/test-open").permitAll()
-                .anyRequest().authenticated()
-            )
+            	    .requestMatchers(
+            	        "/swagger-ui/**",        //allow swagger - its protetced by a botton on ui
+            	        "/swagger-ui.html",
+            	        "/v3/api-docs/**",
+            	        "/v3/api-docs",
+            	        "/swagger-resources/**",
+            	        "/webjars/**"
+            	    ).permitAll()
+            	    .requestMatchers("/leaves/test-open").permitAll()
+            	    .anyRequest().authenticated()
+            	)
+//            .authorizeHttpRequests(auth -> auth
+//                .requestMatchers("/leaves/test-open").permitAll()
+//                .anyRequest().authenticated()
+//            )
             .oauth2ResourceServer(oauth -> oauth
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             );
