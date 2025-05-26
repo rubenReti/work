@@ -6,11 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -18,10 +21,14 @@ public class RedisNotificationCorrelationStore {
 	
 	private static final Logger log = LoggerFactory.getLogger(RedisNotificationCorrelationStore.class);
 	
+    private final RedissonClient redissonClient;
+
 
     private final NotificationService notificationService;
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    
+
 
     @Value("${redis.ttl.minutes}")
     private int redisTtlMinutes; // expire incomplete pairs after X mins - def in app.propp
@@ -38,42 +45,79 @@ public class RedisNotificationCorrelationStore {
         log.info("RRR handleEmployeeCreated: " + dto);
 
         String email = dto.getEmail();
-        EventState state = getState(email);
-        state = new EventState(true, state.authCreated, state.leaveBalanceInitialized, dto, state.authUser);
+        
+        
+        //Reddison Lock for critical resource 
+        String lockKey = "lock:onboarding:" + email;
+        RLock lock = redissonClient.getLock(lockKey);
+        try {
+            if (lock.tryLock(10, 5, TimeUnit.SECONDS)) {
+                EventState state = getState(email);
+                state = new EventState(true, state.authCreated, state.leaveBalanceInitialized, dto, state.authUser);
+                setState(email, state);
+                if (state.authCreated && state.leaveBalanceInitialized) {
+                    trySendIfComplete(email, state);
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Lock interrupted for: {}", email);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
+    }        
 
-        setState(email, state);
-
-        if (state.authCreated) trySendIfComplete(email, state);
-
-    }
-
-    public synchronized void handleAuthCreated(AuthUserDTO dto) {
-        log.info("RRR handleAuthCreated: " + dto);
-
+    public void handleAuthCreated(AuthUserDTO dto) {
         String email = dto.getEmail();
-        EventState state = getState(email);
-        state = new EventState(state.employeeCreated, true, state.leaveBalanceInitialized, state.employee, dto);
+        String lockKey = "lock:onboarding:" + email;
+        RLock lock = redissonClient.getLock(lockKey);
 
-        setState(email, state);
-
-        if (state.employeeCreated)// trigger(email, state);
-        	trySendIfComplete(email, state);
-
+        try {
+            if (lock.tryLock(10, 5, TimeUnit.SECONDS)) {
+                EventState state = getState(email);
+                state = new EventState(state.employeeCreated, true, state.leaveBalanceInitialized, state.employee, dto);
+                setState(email, state);
+                if (state.employeeCreated && state.leaveBalanceInitialized) {
+                    trySendIfComplete(email, state);
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Lock interrupted for: {}", email);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
     
-    public synchronized void handleLeaveBalanceInitialized(String email) {
-        log.info("RRR handleLeaveBalanceInitialized: " + email);
+    public void handleLeaveBalanceInitialized(String email) {
+        String lockKey = "lock:onboarding:" + email;
+        RLock lock = redissonClient.getLock(lockKey);
 
-        EventState state = getState(email);
-        state = new EventState(
-            state.employeeCreated,
-            state.authCreated,
-            true,
-            state.employee,
-            state.authUser
-        );
-        setState(email, state);
-        trySendIfComplete(email, state);
+        try {
+            if (lock.tryLock(10, 5, TimeUnit.SECONDS)) {
+                EventState state = getState(email);
+                state = new EventState(
+                        state.employeeCreated,
+                        state.authCreated,
+                        true,
+                        state.employee,
+                        state.authUser
+                );
+                setState(email, state);
+                trySendIfComplete(email, state);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Lock interrupted for: {}", email);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
 
     
@@ -95,11 +139,15 @@ public class RedisNotificationCorrelationStore {
             return objectMapper.readValue(json, EventState.class);
         } catch (Exception e) {
             throw new RuntimeException("❌ Failed to load EventState from Redis", e);
+            //OR
+            //    log.warn("Failed to deserialize state for {}", email, e);
+//            return new EventState(false, false, false, null, null);
         }
     }
     
+ 
     private String key(String email) {
-        return "notify:eventstate:" + email;
+        return "notify:onboarding:" + email;
     }
 
     private void setState(String email, EventState state) {
