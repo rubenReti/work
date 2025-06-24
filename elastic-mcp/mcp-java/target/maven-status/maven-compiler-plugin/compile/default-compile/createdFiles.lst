@@ -1,0 +1,5 @@
+com\elasticmcp\controller\PingController.class
+com\elasticmcp\dto\DocumentDTO.class
+com\elasticmcp\service\ElasticsearchService.class
+com\elasticmcp\Application.class
+com\elasticmcp\controller\DocumentController.class
