@@ -62,7 +62,7 @@ public class DocumentController {
     
     
     @GetMapping("/search")
-    public Object searchDocuments(@RequestParam("q") String query) {
+    public Object searchDocuments(@RequestParam("query") String query) {
         try {
             return elasticsearchService.searchDocuments(query);
         } catch (Exception e) {
@@ -70,6 +70,7 @@ public class DocumentController {
             return "Error searching documents: " + e.getMessage();
         }
     }
+
 
     
     
